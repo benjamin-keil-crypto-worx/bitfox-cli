@@ -1,0 +1,22 @@
+{
+  "name": "bitfox-cli",
+  "version": "1.0.0",
+  "description": "Order book and Trades applet",
+  "main": "index.js",
+  "scripts": {
+    "android": "node index --base=BTC --quote=USDT --exchange=bybit --timeframe=15m --android ",
+    "dashboardWithSocket": "node index --base=BTC --quote=USDT --exchange=binance --useSocket --timeframe=1h  ",
+    "dashboardNoSocket": "node index --base=BTC --quote=USDT --exchange=binance --timeframe=1h"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bitfox": "^1.0.0",
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.11.0",
+    "ccxt": "^4.2.58",
+    "ccxws": "^0.47.0",
+    "colors": "^1.4.0",
+    "minimist": "^1.2.8"
+  }
+}
