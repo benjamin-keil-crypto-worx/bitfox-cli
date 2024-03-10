@@ -4,16 +4,19 @@ let {DataLoaderBuilder,Strategy, utils} = require("bitfox").bitfox;
 let helpers = require("./lib/helpers");
 const ccxt = require("ccxt");
 
-let currentOrderbook = null;
-
 let tickerPrices = [];
-let trades = [];
+
 let lastTickerInfo = 0;
 let currentDate = new Date();
 let volumeBasedSupportAndResistance =VolumeBasedSupportAndResistance.factory();
 
-const printLastenTickers = (component) => {
+const printLastenTickers = async (args,component) => {
+  let client = new ccxt[args.exchange]();
+  client.options =args.options || {'adjustForTimeDifference': true,'recvWindow':7000 ,rateLimit: 1000};
+  await client.loadTimeDifference()
+  await client.loadMarkets();
   component.log("[   Trades    ]".yellow)
+  let trades = await client.fetchTrades(`${args.base}${args.quote}`)
   if(trades.length > 0) {
     trades.forEach(tr => {
       let price = Number(tr.price).toFixed(4);
@@ -25,14 +28,19 @@ const printLastenTickers = (component) => {
   }
   
 };
-const getBuyVsSellVolume =(component) =>{
+const getBuyVsSellVolume =async (args, component) =>{
+    let client = new ccxt[args.exchange]();
+    client.options =args.options || {'adjustForTimeDifference': true,'recvWindow':7000 ,rateLimit: 1000};
+    await client.loadTimeDifference()
+    await client.loadMarkets();
+    let ob = await client.fetchOrderBook(`${args.base}${args.quote}`);
     component.log("[   Volume    ]".yellow)
-    if(currentOrderbook != null){
-        volumeBasedSupportAndResistance.setResistance(helpers.getHighestVolumeInOrderBookForClient(currentOrderbook.asks));
-        volumeBasedSupportAndResistance.setSupport(helpers.getHighestVolumeInOrderBookForClient(currentOrderbook.bids));
+    if(ob != null){
+        volumeBasedSupportAndResistance.setResistance(helpers.getHighestVolumeInOrderBookForClient(ob.asks));
+        volumeBasedSupportAndResistance.setSupport(helpers.getHighestVolumeInOrderBookForClient(ob.bids));
               
-        const bidSum = currentOrderbook.bids.reduce((total, [_, secondIndex]) => total + secondIndex, 0);
-        const askSum = currentOrderbook.asks.reduce((total, [_, secondIndex]) => total + secondIndex, 0);
+        const bidSum = ob.bids.reduce((total, [_, secondIndex]) => total + secondIndex, 0);
+        const askSum = ob.asks.reduce((total, [_, secondIndex]) => total + secondIndex, 0);
         let sum = askSum + bidSum;
         component.log(`${"[   Buyers    ]".green} @ ${((bidSum / sum)*100).toFixed(0)} %`)
         component.log(`${"[   Sellers   ]".red} @ ${((askSum / sum)*100).toFixed(0)} %`)
@@ -49,8 +57,6 @@ module.exports.run = async (args, screen,grid,androidDashBoard, socketClient) =>
         client.options =args.options || {'adjustForTimeDifference': true,'recvWindow':7000 ,rateLimit: 1000};
         await client.loadTimeDifference()
         await client.loadMarkets();
-        let ob = await client.fetchOrderBook(`${args.base}${args.quote}`);
-        currentOrderbook = ob;
         await utils.sleepy();
         let tickerData = await client.fetchTicker(`${args.base}${args.quote}`)
         tickerPrices.push(tickerData.last);
@@ -96,13 +102,13 @@ module.exports.run = async (args, screen,grid,androidDashBoard, socketClient) =>
 
       screen.key(['escape', 'q', 'C-c', 'b', 's', 'v', 't' , ''  ], function (ch, key) {
         if (key.name.toLowerCase() === 'v') {
-            getBuyVsSellVolume(androidDashBoard);
+            getBuyVsSellVolume(args,androidDashBoard);
             screen.render();
           } else if (key.name.toLowerCase() === 's') {
             androidDashBoard.log('You pressed S');
             screen.render();
           } else if (key.name.toLowerCase() === 't') {
-            printLastenTickers(androidDashBoard);
+            printLastenTickers(args,androidDashBoard);
             screen.render();
           } else {
             return process.exit(0);
