@@ -7,10 +7,24 @@ const ccxt = require("ccxt");
 let currentOrderbook = null;
 
 let tickerPrices = [];
+let trades = [];
 let lastTickerInfo = 0;
 let currentDate = new Date();
 let volumeBasedSupportAndResistance =VolumeBasedSupportAndResistance.factory();
 
+const printLastenTickers = (component) => {
+  component.log("[   Trades    ]".yellow)
+  if(trades.length > 0) {
+    trades.forEach(tr => {
+      let price = Number(tr.price).toFixed(4);
+      let amount = Number(tr.amount).toFixed(4);
+      (tr.side === "sell") ? component.log(`${price} @ ${amount} ⬇`.red) : component.log(`${price} @ ${amount} ⬆`.green);
+    })
+  } else{
+    component.log(`[     N/A     ]`)
+  }
+  
+};
 const getBuyVsSellVolume =(component) =>{
     component.log("[   Volume    ]".yellow)
     if(currentOrderbook != null){
@@ -44,6 +58,8 @@ module.exports.run = async (args, screen,grid,androidDashBoard, socketClient) =>
           tickerPrices.shift();
         }
         androidDashBoard.log(`${"[    Ticker   ]".yellow} ${args.base}${args.quote} ${args.exchange} @ ${tickerData.last}`);
+        trades = await client.fetchTrades(`${args.base}${args.quote}`)
+        await utils.sleepy();
 
         let dataLoader = DataLoaderBuilder()
             .setExchangeName(args.exchange)
@@ -85,7 +101,10 @@ module.exports.run = async (args, screen,grid,androidDashBoard, socketClient) =>
           } else if (key.name.toLowerCase() === 's') {
             androidDashBoard.log('You pressed S');
             screen.render();
-          }else{
+          } else if (key.name.toLowerCase() === 't') {
+            printLastenTickers(androidDashBoard);
+            screen.render();
+          } else {
             return process.exit(0);
           }
       });
